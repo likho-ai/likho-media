@@ -93,6 +93,9 @@ type UploadResult struct {
 	DuplicateOf string `json:"duplicate_of,omitempty"`
 }
 
+// storeTimeout is how long storing a received file may take before the upload is answered with an error.
+const storeTimeout = 2 * time.Minute
+
 var extension = regexp.MustCompile(`^\.[a-z0-9]{1,8}$`)
 
 // objectKey is where a file's original is kept: workspace/media id/original.ext
@@ -148,8 +151,12 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 	}
 	sum := hex.EncodeToString(hash.Sum(nil))
 
+	// The file is here. Storing it must not wait for ever on a store that does not answer.
+	ctx, cancel := context.WithTimeout(r.Context(), storeTimeout)
+	defer cancel()
+
 	// The same link used twice: the same file is fine, a different one is not.
-	if existing, err := a.store.Get(r.Context(), mediaID); err == nil {
+	if existing, err := a.store.Get(ctx, mediaID); err == nil {
 		a.answerExisting(w, existing, sum)
 		return
 	} else if !errors.Is(err, store.ErrNotFound) {
@@ -165,16 +172,16 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 		contentType = "application/octet-stream"
 	}
 	key := objectKey(claims)
-	if err := a.objects.PutFile(r.Context(), a.cfg.BucketOriginal, key, spool.Name(), contentType); err != nil {
+	if err := a.objects.PutFile(ctx, a.cfg.BucketOriginal, key, spool.Name(), contentType); err != nil {
 		a.internal(w, "could not store the file", err)
 		return
 	}
-	stored, err := a.store.Insert(r.Context(), store.Media{
+	stored, err := a.store.Insert(ctx, store.Media{
 		ID: mediaID, WorkspaceID: claims.WorkspaceID, RecordingID: claims.RecordingID,
 		OriginalName: claims.OriginalName, ContentType: contentType, SizeBytes: size, SHA256: sum, OriginalKey: key,
 	})
 	if errors.Is(err, store.ErrExists) { // two uploads to one link at the same moment
-		if existing, getErr := a.store.Get(r.Context(), mediaID); getErr == nil {
+		if existing, getErr := a.store.Get(ctx, mediaID); getErr == nil {
 			a.answerExisting(w, existing, sum)
 			return
 		}
@@ -185,7 +192,7 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := UploadResult{MediaID: stored.ID, SHA256: sum, SizeBytes: size, Status: stored.Status}
-	if earlier, err := a.store.FindBySHA256(r.Context(), stored.WorkspaceID, sum, stored.ID); err == nil {
+	if earlier, err := a.store.FindBySHA256(ctx, stored.WorkspaceID, sum, stored.ID); err == nil {
 		result.DuplicateOf = earlier.ID
 	}
 	a.wake()
