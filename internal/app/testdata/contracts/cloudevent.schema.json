@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://likho-ai.github.io/likho-contracts/events/cloudevent.schema.json",
+  "title": "CloudEvents envelope used by every Likho event",
+  "type": "object",
+  "required": [
+    "specversion",
+    "id",
+    "source",
+    "type",
+    "time",
+    "subject",
+    "datacontenttype",
+    "data"
+  ],
+  "properties": {
+    "specversion": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Unique per event; also sent as the Nats-Msg-Id header so a retried publish is stored once"
+    },
+    "source": {
+      "type": "string",
+      "pattern": "^likho-[a-z-]+$",
+      "description": "The service that published the event"
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^likho\\.[a-z.]+\\.v[0-9]+$"
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "subject": {
+      "type": "string",
+      "description": "The recording, transcript or workspace the event is about"
+    },
+    "datacontenttype": {
+      "const": "application/json"
+    },
+    "traceparent": {
+      "type": "string",
+      "description": "W3C trace context, so one call can be followed across services"
+    },
+    "actor": {
+      "type": "string",
+      "description": "User id that caused the event, when a person did"
+    },
+    "data": {
+      "type": "object"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://likho-ai.github.io/likho-contracts/events/likho.media.uploaded.v1.schema.json",
+  "title": "A recording was stored and is waiting to be converted",
+  "description": "data of likho.media.uploaded.v1; published by likho-media on NATS subject likho.media.uploaded",
+  "type": "object",
+  "required": [
+    "recording_id",
+    "media_id",
+    "workspace_id",
+    "original_name",
+    "sha256",
+    "size_bytes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "recording_id": {
+      "type": "string",
+      "pattern": "^rec_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "media_id": {
+      "type": "string",
+      "pattern": "^med_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^wsp_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "original_name": {
+      "type": "string"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "size_bytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "dialer_crt_object_id": {
+      "type": "string",
+      "description": "Dialer id of the interaction, when the recording came from the dialer"
+    }
+  }
+}

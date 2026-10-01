@@ -1,0 +1,11 @@
+.env
+/likho-media
+/likho-media.exe
+*.test
+coverage.out
+
+# Recordings are data, never code. Tests generate their own audio.
+recordings/
+*.mp3
+*.wav
+*.flac

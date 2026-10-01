@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://likho-ai.github.io/likho-contracts/events/likho.media.failed.v1.schema.json",
+  "title": "The uploaded file could not be turned into audio; the recording cannot be transcribed",
+  "description": "data of likho.media.failed.v1; published by likho-media on NATS subject likho.media.failed",
+  "type": "object",
+  "required": [
+    "recording_id",
+    "media_id",
+    "workspace_id",
+    "code",
+    "message"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "recording_id": {
+      "type": "string",
+      "pattern": "^rec_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "media_id": {
+      "type": "string",
+      "pattern": "^med_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^wsp_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "code": {
+      "enum": [
+        "audio_unreadable",
+        "internal"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "description": "What happened, in plain words, for the Recordings page"
+    }
+  }
+}

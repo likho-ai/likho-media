@@ -1,0 +1,19 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - gosec
+    - misspell
+    - nolintlint
+  exclusions:
+    rules:
+      # Tests read files they just wrote and call tools with fixed arguments.
+      - path: _test\.go
+        linters: [gosec, bodyclose]
+
+formatters:
+  enable:
+    - gofmt

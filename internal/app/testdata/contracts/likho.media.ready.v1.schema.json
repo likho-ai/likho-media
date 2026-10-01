@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://likho-ai.github.io/likho-contracts/events/likho.media.ready.v1.schema.json",
+  "title": "The file is audio, its waveform exists and a browser can play it; the recording can be transcribed",
+  "description": "data of likho.media.ready.v1; published by likho-media on NATS subject likho.media.ready",
+  "type": "object",
+  "required": [
+    "recording_id",
+    "media_id",
+    "workspace_id",
+    "duration_seconds",
+    "channels",
+    "sample_rate"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "recording_id": {
+      "type": "string",
+      "pattern": "^rec_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "media_id": {
+      "type": "string",
+      "pattern": "^med_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^wsp_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "duration_seconds": {
+      "type": "number",
+      "minimum": 0
+    },
+    "channels": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "sample_rate": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}
