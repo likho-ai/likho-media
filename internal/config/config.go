@@ -33,9 +33,13 @@ type Config struct {
 	BucketPlayback string
 	BucketPeaks    string
 
-	// PublicURL is the address browsers and workers reach this service at (the gateway).
-	// Upload and download links start with it.
+	// PublicURL is the address browsers reach this service at (the gateway). Upload links and
+	// links to the audio and the peaks start with it.
 	PublicURL string
+	// InternalURL is the address other services reach this service at; links to the original
+	// start with it (only services read originals). Empty = PublicURL. In a cluster, where the
+	// public address is not reachable from inside, it is the service's own name and port.
+	InternalURL string
 	// LinkSecret signs upload and download links.
 	LinkSecret  string
 	DownloadTTL time.Duration
@@ -91,6 +95,7 @@ func Load() (Config, error) {
 		BucketPlayback: text("S3_BUCKET_PLAYBACK", "likho-normalized"),
 		BucketPeaks:    text("S3_BUCKET_PEAKS", "likho-peaks"),
 		PublicURL:      strings.TrimRight(text("PUBLIC_URL", "http://localhost:8080"), "/"),
+		InternalURL:    strings.TrimRight(text("INTERNAL_URL", ""), "/"),
 		LinkSecret:     text("LINK_SECRET", DevLinkSecret),
 		DownloadTTL:    time.Duration(number("DOWNLOAD_TTL_SECONDS", 900)) * time.Second,
 		UploadTTL:      time.Duration(number("UPLOAD_TTL_SECONDS", 3600)) * time.Second,

@@ -81,6 +81,33 @@ func TestUploadLinkIsRefused(t *testing.T) {
 	}
 }
 
+// Only services read the original, so its links use the internal address when one is set; the
+// audio and the peaks, which browsers fetch, stay on the public one. The signature does not
+// depend on the address, so a link verifies either way.
+func TestOriginalLinksUseTheInternalAddress(t *testing.T) {
+	signer := NewSigner("secret", "http://localhost:8080")
+	original, _ := signer.DownloadURL(upload().MediaID, KindOriginal, time.Minute)
+	if !strings.HasPrefix(original, "http://localhost:8080/media/") {
+		t.Fatalf("without an internal address the original link is public: %s", original)
+	}
+
+	signer.SetInternalURL("http://likho-media:4010")
+	original, _ = signer.DownloadURL(upload().MediaID, KindOriginal, time.Minute)
+	audio, _ := signer.DownloadURL(upload().MediaID, KindAudio, time.Minute)
+	peaks, _ := signer.DownloadURL(upload().MediaID, KindPeaks, time.Minute)
+	if !strings.HasPrefix(original, "http://likho-media:4010/media/") {
+		t.Fatalf("original link not on the internal address: %s", original)
+	}
+	for _, link := range []string{audio, peaks} {
+		if !strings.HasPrefix(link, "http://localhost:8080/media/") {
+			t.Fatalf("browser link not on the public address: %s", link)
+		}
+	}
+	if err := signer.VerifyDownload(upload().MediaID, KindOriginal, queryOf(t, original)); err != nil {
+		t.Fatalf("internal link does not verify: %v", err)
+	}
+}
+
 func TestLinksExpire(t *testing.T) {
 	signer := NewSigner("secret", "http://localhost:8080")
 	now := time.Now()

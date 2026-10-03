@@ -146,6 +146,7 @@ ConfigMaps and Secrets.
 | `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION` | local stack | Object store |
 | `S3_BUCKET_ORIGINAL`, `S3_BUCKET_PLAYBACK`, `S3_BUCKET_PEAKS` | `likho-audio`, `likho-normalized`, `likho-peaks` | One bucket per kind of object |
 | `PUBLIC_URL` | `http://localhost:8080` | The address links start with: the gateway |
+| `INTERNAL_URL` | empty (= `PUBLIC_URL`) | The address other services reach this service at; links to the original start with it. In a cluster: `http://likho-media:4010` |
 | `LINK_SECRET` | a development value | Signs links. The service refuses to start in production without its own |
 | `UPLOAD_TTL_SECONDS` / `DOWNLOAD_TTL_SECONDS` | `3600` / `900` | How long links work |
 | `MAX_UPLOAD_MB` | `500` | Larger files are refused |

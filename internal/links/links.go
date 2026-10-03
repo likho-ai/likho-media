@@ -45,15 +45,21 @@ type Upload struct {
 
 // Signer makes and checks links.
 type Signer struct {
-	secret    []byte
-	publicURL string
-	now       func() time.Time
+	secret      []byte
+	publicURL   string
+	internalURL string
+	now         func() time.Time
 }
 
 // NewSigner returns a signer. publicURL is the address the links start with, without a trailing slash.
 func NewSigner(secret, publicURL string) *Signer {
-	return &Signer{secret: []byte(secret), publicURL: publicURL, now: time.Now}
+	return &Signer{secret: []byte(secret), publicURL: publicURL, internalURL: publicURL, now: time.Now}
 }
+
+// SetInternalURL gives links to the original a different base: the address other services reach
+// this service at inside the network (in a cluster, the service's own name). Only services read
+// originals; browsers get the audio and the peaks, which stay on the public address.
+func (s *Signer) SetInternalURL(url string) { s.internalURL = url }
 
 // SetClock replaces the clock, for tests.
 func (s *Signer) SetClock(now func() time.Time) { s.now = now }
@@ -104,7 +110,11 @@ func (s *Signer) DownloadURL(mediaID, kind string, ttl time.Duration) (string, t
 	query := url.Values{}
 	query.Set("expires", strconv.FormatInt(expires.Unix(), 10))
 	query.Set("signature", s.sign(downloadMessage(mediaID, kind, expires.Unix())))
-	return fmt.Sprintf("%s/media/%s/%s?%s", s.publicURL, mediaID, kind, query.Encode()), expires
+	base := s.publicURL
+	if kind == KindOriginal {
+		base = s.internalURL
+	}
+	return fmt.Sprintf("%s/media/%s/%s?%s", base, mediaID, kind, query.Encode()), expires
 }
 
 // VerifyDownload checks the query of a download link for this media id and kind.

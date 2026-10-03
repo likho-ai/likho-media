@@ -104,6 +104,9 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, options Optio
 		publisher = options.Publisher(bus)
 	}
 	signer := links.NewSigner(cfg.LinkSecret, cfg.PublicURL)
+	if cfg.InternalURL != "" {
+		signer.SetInternalURL(cfg.InternalURL)
+	}
 	processor := ingest.New(cfg, db, objs, publisher, options.Timing, log)
 	ready := func(ctx context.Context) bool { return bus.Connected() && db.Ping(ctx) == nil }
 	api := httpapi.New(cfg, db, objs, signer, processor.Wake, ready, log)
