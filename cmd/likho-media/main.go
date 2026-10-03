@@ -19,6 +19,10 @@ func main() {
 }
 
 func run() int {
+	if _, err := config.LoadEnvFiles(); err != nil {
+		slog.New(slog.NewJSONHandler(os.Stdout, nil)).Error("configuration", "error", err)
+		return 2
+	}
 	cfg, err := config.Load()
 	if err != nil {
 		slog.New(slog.NewJSONHandler(os.Stdout, nil)).Error("configuration", "error", err)

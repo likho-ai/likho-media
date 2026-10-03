@@ -103,8 +103,8 @@ func Load() (Config, error) {
 		WorkDir:        text("WORK_DIR", ""),
 	}
 
-	if cfg.Env == "production" && cfg.LinkSecret == DevLinkSecret {
-		problems = append(problems, "LINK_SECRET must be set in production")
+	if (cfg.Env == "staging" || cfg.Env == "production") && cfg.LinkSecret == DevLinkSecret {
+		problems = append(problems, "LINK_SECRET must be set in "+cfg.Env)
 	}
 	if cfg.Workers < 1 {
 		problems = append(problems, "WORKERS must be at least 1")
