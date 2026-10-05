@@ -139,10 +139,12 @@ ConfigMaps and Secrets.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `HTTP_PORT` | `4010` | Uploads and downloads, `GET /healthz` (alive), `GET /readyz` (database and bus answer) |
+| `HTTP_PORT` | `4010` | Uploads and downloads, `GET /healthz` (alive), `GET /readyz` (database and bus answer), `GET /metrics` (media by status, uploads and bytes, conversions by outcome and how long they took, events published) |
 | `GRPC_PORT` | `5010` | `MediaService` and gRPC health |
 | `DATABASE_URL` | local stack, database `likho_media` | PostgreSQL |
 | `NATS_URL` | `nats://localhost:4222` | Event bus |
+| `NATS_CONNECT_TIMEOUT_SECONDS` | `120` | How long the start keeps trying to reach NATS before giving up |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | empty | Also push the metrics there (OTLP/HTTP, e.g. `http://localhost:4318`); `GET /metrics` (Prometheus text) is always on |
 | `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_REGION` | local stack | Object store |
 | `S3_BUCKET_ORIGINAL`, `S3_BUCKET_PLAYBACK`, `S3_BUCKET_PEAKS` | `likho-audio`, `likho-normalized`, `likho-peaks` | One bucket per kind of object |
 | `PUBLIC_URL` | `http://localhost:8080` | The address links start with: the gateway |

@@ -20,21 +20,23 @@ import (
 	"github.com/likho-ai/likho-media/internal/httpapi"
 	"github.com/likho-ai/likho-media/internal/ingest"
 	"github.com/likho-ai/likho-media/internal/links"
+	"github.com/likho-ai/likho-media/internal/metrics"
 	"github.com/likho-ai/likho-media/internal/objects"
 	"github.com/likho-ai/likho-media/internal/rpc"
 	"github.com/likho-ai/likho-media/internal/store"
 )
 
 // Version of the service, shown in the start-up log line.
-const Version = "0.1.0"
+const Version = "0.2.0"
 
 // App is the running service.
 type App struct {
-	cfg    config.Config
-	log    *slog.Logger
-	store  *store.Store
-	bus    *events.Bus
-	ingest *ingest.Processor
+	cfg     config.Config
+	log     *slog.Logger
+	store   *store.Store
+	bus     *events.Bus
+	ingest  *ingest.Processor
+	metrics *metrics.Metrics
 
 	httpListener net.Listener
 	grpcListener net.Listener
@@ -107,9 +109,13 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, options Optio
 	if cfg.InternalURL != "" {
 		signer.SetInternalURL(cfg.InternalURL)
 	}
-	processor := ingest.New(cfg, db, objs, publisher, options.Timing, log)
+	meters, err := metrics.New(ctx, "likho-media", Version, cfg.OTLPEndpoint, db.CountByStatus)
+	if err != nil {
+		return fail(err)
+	}
+	processor := ingest.New(cfg, db, objs, publisher, options.Timing, log).WithMetrics(meters)
 	ready := func(ctx context.Context) bool { return bus.Connected() && db.Ping(ctx) == nil }
-	api := httpapi.New(cfg, db, objs, signer, processor.Wake, ready, log)
+	api := httpapi.New(cfg, db, objs, signer, processor.Wake, ready, log).WithMetrics(meters)
 
 	rpcMux := http.NewServeMux()
 	rpcMux.Handle(mediav1connect.NewMediaServiceHandler(rpc.New(cfg, db, objs, signer, log)))
@@ -122,7 +128,7 @@ func New(ctx context.Context, cfg config.Config, log *slog.Logger, options Optio
 	protocols.SetUnencryptedHTTP2(true)
 
 	return &App{
-		cfg: cfg, log: log, store: db, bus: bus, ingest: processor,
+		cfg: cfg, log: log, store: db, bus: bus, ingest: processor, metrics: meters,
 		httpListener: httpListener,
 		grpcListener: grpcListener,
 		httpServer:   &http.Server{Handler: api.Handler(), ReadHeaderTimeout: 10 * time.Second},
@@ -174,6 +180,7 @@ func (a *App) Run(ctx context.Context) error {
 	_ = a.grpcServer.Shutdown(shutdownCtx)
 	stopWork()
 	work.Wait()
+	_ = a.metrics.Close(shutdownCtx)
 	a.bus.Close()
 	a.store.Close()
 	return runErr

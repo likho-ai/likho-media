@@ -23,6 +23,10 @@ type Config struct {
 
 	DatabaseURL string
 	NATSURL     string
+	// NATSConnectTimeout is how long the start keeps trying to reach NATS before giving up.
+	NATSConnectTimeout time.Duration
+	// OTLPEndpoint is where metrics are pushed as well (OTLP/HTTP); empty = only GET /metrics.
+	OTLPEndpoint string
 
 	S3Endpoint  string
 	S3AccessKey string
@@ -81,31 +85,33 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		Env:            text("LIKHO_ENV", "development"),
-		LogLevel:       text("LOG_LEVEL", "INFO"),
-		HTTPPort:       number("HTTP_PORT", 4010),
-		GRPCPort:       number("GRPC_PORT", 5010),
-		DatabaseURL:    text("DATABASE_URL", "postgres://likho_media:likho_media@localhost:5433/likho_media"),
-		NATSURL:        text("NATS_URL", "nats://localhost:4222"),
-		S3Endpoint:     text("S3_ENDPOINT", "http://localhost:9000"),
-		S3AccessKey:    text("S3_ACCESS_KEY", "likho-dev"),
-		S3SecretKey:    text("S3_SECRET_KEY", "likho-dev-secret"),
-		S3Region:       text("S3_REGION", "us-east-1"),
-		BucketOriginal: text("S3_BUCKET_ORIGINAL", "likho-audio"),
-		BucketPlayback: text("S3_BUCKET_PLAYBACK", "likho-normalized"),
-		BucketPeaks:    text("S3_BUCKET_PEAKS", "likho-peaks"),
-		PublicURL:      strings.TrimRight(text("PUBLIC_URL", "http://localhost:8080"), "/"),
-		InternalURL:    strings.TrimRight(text("INTERNAL_URL", ""), "/"),
-		LinkSecret:     text("LINK_SECRET", DevLinkSecret),
-		DownloadTTL:    time.Duration(number("DOWNLOAD_TTL_SECONDS", 900)) * time.Second,
-		UploadTTL:      time.Duration(number("UPLOAD_TTL_SECONDS", 3600)) * time.Second,
-		MaxUploadMB:    int64(number("MAX_UPLOAD_MB", 500)),
-		Workers:        number("WORKERS", 2),
-		MaxAttempts:    number("MAX_ATTEMPTS", 5),
-		ClaimTimeout:   time.Duration(number("CLAIM_TIMEOUT_SECONDS", 600)) * time.Second,
-		FFmpegPath:     text("FFMPEG_PATH", "ffmpeg"),
-		FFprobePath:    text("FFPROBE_PATH", "ffprobe"),
-		WorkDir:        text("WORK_DIR", ""),
+		Env:                text("LIKHO_ENV", "development"),
+		LogLevel:           text("LOG_LEVEL", "INFO"),
+		HTTPPort:           number("HTTP_PORT", 4010),
+		GRPCPort:           number("GRPC_PORT", 5010),
+		DatabaseURL:        text("DATABASE_URL", "postgres://likho_media:likho_media@localhost:5433/likho_media"),
+		NATSURL:            text("NATS_URL", "nats://localhost:4222"),
+		NATSConnectTimeout: time.Duration(number("NATS_CONNECT_TIMEOUT_SECONDS", 120)) * time.Second,
+		OTLPEndpoint:       text("OTEL_EXPORTER_OTLP_ENDPOINT", ""),
+		S3Endpoint:         text("S3_ENDPOINT", "http://localhost:9000"),
+		S3AccessKey:        text("S3_ACCESS_KEY", "likho-dev"),
+		S3SecretKey:        text("S3_SECRET_KEY", "likho-dev-secret"),
+		S3Region:           text("S3_REGION", "us-east-1"),
+		BucketOriginal:     text("S3_BUCKET_ORIGINAL", "likho-audio"),
+		BucketPlayback:     text("S3_BUCKET_PLAYBACK", "likho-normalized"),
+		BucketPeaks:        text("S3_BUCKET_PEAKS", "likho-peaks"),
+		PublicURL:          strings.TrimRight(text("PUBLIC_URL", "http://localhost:8080"), "/"),
+		InternalURL:        strings.TrimRight(text("INTERNAL_URL", ""), "/"),
+		LinkSecret:         text("LINK_SECRET", DevLinkSecret),
+		DownloadTTL:        time.Duration(number("DOWNLOAD_TTL_SECONDS", 900)) * time.Second,
+		UploadTTL:          time.Duration(number("UPLOAD_TTL_SECONDS", 3600)) * time.Second,
+		MaxUploadMB:        int64(number("MAX_UPLOAD_MB", 500)),
+		Workers:            number("WORKERS", 2),
+		MaxAttempts:        number("MAX_ATTEMPTS", 5),
+		ClaimTimeout:       time.Duration(number("CLAIM_TIMEOUT_SECONDS", 600)) * time.Second,
+		FFmpegPath:         text("FFMPEG_PATH", "ffmpeg"),
+		FFprobePath:        text("FFPROBE_PATH", "ffprobe"),
+		WorkDir:            text("WORK_DIR", ""),
 	}
 
 	if (cfg.Env == "staging" || cfg.Env == "production") && cfg.LinkSecret == DevLinkSecret {

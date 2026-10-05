@@ -156,6 +156,25 @@ func (s *Store) Migrate(ctx context.Context) error {
 	return nil
 }
 
+// CountByStatus says how many media are in each status (for the metrics).
+func (s *Store) CountByStatus(ctx context.Context) (map[string]int, error) {
+	rows, err := s.pool.Query(ctx, `SELECT status, count(*) FROM media GROUP BY status`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	counts := map[string]int{StatusUploaded: 0, StatusReady: 0, StatusFailed: 0}
+	for rows.Next() {
+		var status string
+		var n int
+		if err := rows.Scan(&status, &n); err != nil {
+			return nil, err
+		}
+		counts[status] = n
+	}
+	return counts, rows.Err()
+}
+
 // Insert stores a file that has just arrived. It returns ErrExists when the id is taken.
 func (s *Store) Insert(ctx context.Context, m Media) (Media, error) {
 	row := s.pool.QueryRow(ctx, `

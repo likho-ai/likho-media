@@ -21,6 +21,7 @@ import (
 	"github.com/likho-ai/likho-media/internal/audio"
 	"github.com/likho-ai/likho-media/internal/config"
 	"github.com/likho-ai/likho-media/internal/events"
+	"github.com/likho-ai/likho-media/internal/metrics"
 	"github.com/likho-ai/likho-media/internal/objects"
 	"github.com/likho-ai/likho-media/internal/store"
 )
@@ -75,6 +76,7 @@ type Processor struct {
 	timing  Timing
 	log     *slog.Logger
 	wake    chan struct{}
+	metrics *metrics.Metrics
 }
 
 // New returns a processor. Call Run to start it.
@@ -96,6 +98,22 @@ func (p *Processor) Wake() {
 	select {
 	case p.wake <- struct{}{}:
 	default:
+	}
+}
+
+// WithMetrics counts conversions and the events that go out.
+func (p *Processor) WithMetrics(m *metrics.Metrics) *Processor {
+	p.metrics = m
+	return p
+}
+
+func (p *Processor) count(ctx context.Context, outcome string, took time.Duration) {
+	if p.metrics == nil {
+		return
+	}
+	p.metrics.Conversions.Add(ctx, 1, metrics.Outcome(outcome))
+	if took > 0 {
+		p.metrics.ConversionSeconds.Record(ctx, took.Seconds(), metrics.Outcome(outcome))
 	}
 }
 
@@ -158,16 +176,20 @@ func (p *Processor) handle(ctx context.Context, media store.Media) {
 		log.Info("ready", "duration_seconds", ready.DurationSeconds, "channels", ready.Channels,
 			"sample_rate", ready.SampleRate, "codec", ready.Codec, "playback_copy", ready.PlaybackKey != "",
 			"took_ms", time.Since(started).Milliseconds())
+		p.count(ctx, "ready", time.Since(started))
 		p.publishOutcome(ctx, ready)
 	case errors.Is(err, audio.ErrUnreadable), errors.Is(err, objects.ErrNotFound), errors.Is(err, errEmpty):
 		reason := ReasonUnreadable
 		if errors.Is(err, errEmpty) {
 			reason = ReasonEmpty
 		}
+		p.count(ctx, "failed", time.Since(started))
 		p.fail(ctx, log, media, CodeUnreadable, reason, err)
 	case media.Attempts >= p.cfg.MaxAttempts:
+		p.count(ctx, "failed", time.Since(started))
 		p.fail(ctx, log, media, CodeInternal, ReasonGaveUp, err)
 	default:
+		p.count(ctx, "retry", 0)
 		p.retryLater(ctx, log, media, err)
 	}
 }
@@ -266,6 +288,9 @@ func (p *Processor) publishOutcome(ctx context.Context, media store.Media) {
 	if err := p.bus.Publish(ctx, subject, event); err != nil {
 		p.log.Warn("could not publish; will try again", "media_id", media.ID, "subject", subject, "error", err)
 		return
+	}
+	if p.metrics != nil {
+		p.metrics.EventsPublished.Add(ctx, 1, metrics.Subject(subject))
 	}
 	if err := p.store.MarkOutcomePublished(ctx, media.ID); err != nil {
 		p.log.Warn("could not record that the event went out", "media_id", media.ID, "error", err)

@@ -796,6 +796,11 @@ func TestHealth(t *testing.T) {
 	if response, _ := get(t, s.http+"/nothing-here"); response.StatusCode != http.StatusNotFound {
 		t.Fatalf("got %d", response.StatusCode)
 	}
+	// Metrics: Prometheus text with the media by status, after the conversions the other tests made.
+	response, body := get(t, s.http+"/metrics")
+	if response.StatusCode != http.StatusOK || !strings.Contains(string(body), "likho_media{") {
+		t.Fatalf("/metrics: got %d %q", response.StatusCode, body)
+	}
 }
 
 // The Python services call this one with ordinary gRPC clients: HTTP/2 without TLS.

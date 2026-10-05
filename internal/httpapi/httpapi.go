@@ -20,6 +20,7 @@ import (
 	"github.com/likho-ai/likho-media/internal/config"
 	"github.com/likho-ai/likho-media/internal/ids"
 	"github.com/likho-ai/likho-media/internal/links"
+	"github.com/likho-ai/likho-media/internal/metrics"
 	"github.com/likho-ai/likho-media/internal/objects"
 	"github.com/likho-ai/likho-media/internal/store"
 )
@@ -33,6 +34,7 @@ type API struct {
 	wake    func()
 	ready   func(context.Context) bool
 	log     *slog.Logger
+	metrics *metrics.Metrics
 }
 
 // New returns the API. wake is called when a file has arrived; ready answers /readyz.
@@ -41,9 +43,18 @@ func New(cfg config.Config, db *store.Store, objs *objects.Store, signer *links.
 	return &API{cfg: cfg, store: db, objects: objs, signer: signer, wake: wake, ready: ready, log: log}
 }
 
+// WithMetrics serves GET /metrics and counts uploads.
+func (a *API) WithMetrics(m *metrics.Metrics) *API {
+	a.metrics = m
+	return a
+}
+
 // Handler returns the routes.
 func (a *API) Handler() http.Handler {
 	mux := http.NewServeMux()
+	if a.metrics != nil {
+		mux.Handle("GET /metrics", a.metrics.Handler())
+	}
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = io.WriteString(w, "ok\n")
@@ -196,6 +207,10 @@ func (a *API) upload(w http.ResponseWriter, r *http.Request) {
 		result.DuplicateOf = earlier.ID
 	}
 	a.wake()
+	if a.metrics != nil {
+		a.metrics.Uploads.Add(r.Context(), 1, metrics.Outcome("stored"))
+		a.metrics.UploadBytes.Add(r.Context(), size)
+	}
 	a.log.Info("uploaded", "media_id", stored.ID, "size_bytes", size)
 	writeJSON(w, http.StatusCreated, result)
 }

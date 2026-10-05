@@ -33,7 +33,8 @@ func run() int {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	startCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// Long enough to wait for NATS (NATS_CONNECT_TIMEOUT_SECONDS) and still check the rest.
+	startCtx, cancel := context.WithTimeout(ctx, cfg.NATSConnectTimeout+30*time.Second)
 	service, err := app.New(startCtx, cfg, log, app.Options{})
 	cancel()
 	if err != nil {
